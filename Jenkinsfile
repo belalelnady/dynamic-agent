@@ -1,32 +1,29 @@
 pipeline {
-    agent { label 'jenkins-agent-with-docker' }
+    agent none
     environment {
         IMAGE_NAME = 'belalelnady/simple-app:latest'
         REMOTE_HOST = '192.168.1.111'
-        REMOTE_USER = 'belal'
     }
     stages {
         stage('Checkout') {
+            agent {label 'ssh-agent'}
             steps {
                 checkout scm
+                stash name: 'github-source', includes: '**'
             }
         }
         
-        stage('Build Docker Image') {
+        stage('Build Docker Image and push') {
+            agent {label 'jenkins-agent-with-docker'}
             steps {
-                script {
-                    docker.build("${IMAGE_NAME}", './web-app')
-                }
-            }
-        }
-        
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerHub', 
+                unstash 'github-source'
+                 withCredentials([usernamePassword(credentialsId: 'dockerHub', 
                                                   usernameVariable: 'DOCKER_USER', 
                                                   passwordVariable: 'DOCKER_PASS')]) {
                     script {
+                    
                         sh """
+                            docker.build("${IMAGE_NAME}", './web-app')
                             docker login -u ${DOCKER_USER} -p ${DOCKER_PASS}
                             docker push ${IMAGE_NAME}
                         """
@@ -34,8 +31,9 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Deploy to Remote Server') {
+            agent {label 'ssh-agent'}
             steps {
                 sshagent (credentials: ['u-server']) {
                     sh """
@@ -54,7 +52,7 @@ pipeline {
         }
         always {
             sh 'echo "build is finished"'
-            // cleanWs()
+             cleanWs()
         }
     }
 }
