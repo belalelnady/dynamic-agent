@@ -38,7 +38,13 @@ pipeline {
             steps {
                 sshagent (credentials: ['u-server']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no belal@192.168.1.111 '
+                        mkdir -p ~/.ssh
+                        #Remove the key if existed
+                        ssh-keygen -R ${REMOTE_HOST} 2>/dev/null || true
+                        ssh-keyscan -H ${REMOTE_HOST} >> ~/.ssh/known_hosts
+                        chmod 600 ~/.ssh/known_hosts
+
+                        ssh  belal@${REMOTE_HOST} '
                         docker container rm -f simple-app || true
                         docker image rm -f  ${IMAGE_NAME} || true
                         docker run -d -p 8770:80 --name simple-app ${IMAGE_NAME}'
