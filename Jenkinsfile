@@ -39,8 +39,8 @@ pipeline {
                 sshagent (credentials: ['u-server']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no belal@192.168.1.111 '
-                        docker container rm -f simple-app
-                        docker image rm -f  ${IMAGE_NAME}
+                        docker container rm -f simple-app || true
+                        docker image rm -f  ${IMAGE_NAME} || true
                         docker run -d -p 8770:80 --name simple-app ${IMAGE_NAME}'
                     """
                 }
